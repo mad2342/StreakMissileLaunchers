@@ -1,0 +1,10 @@
+{
+    "Name": "StreakMissileLaunchers",
+    "Enabled": true,
+
+    "Version": "1.9.1-001R",
+    "Description": "Adds short range Streak Missile Launchers to Battletech. Includes Streak SRM-2, Streak SRM-4 and Streak SRM-6 lauchners.",
+    "Author": "Mad",
+	
+	"DLL": "StreakMissileLaunchers.dll"
+}
