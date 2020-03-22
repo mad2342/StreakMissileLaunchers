@@ -15,6 +15,30 @@ namespace StreakMissileLaunchers.Patches
         internal static bool StreakWillHit = false;
 
 
+        // Cancel triggering the next weapon in an AttackDirector.AttackSequence if it's a special system (ie streak targeting laser)
+        [HarmonyPatch(typeof(WeaponEffect), "PublishNextWeaponMessage")]
+        public static class WeaponEffect_PublishNextWeaponMessage_Patch
+        {
+            public static bool Prefix(WeaponEffect __instance)
+            {
+                try
+                {
+                    Logger.Debug($"[WeaponEffect_PublishNextWeaponMessage_PREFIX] WeaponEffect: {__instance.name}, Weapon: {__instance.weapon.weaponDef.Description.Id}");
+                    if (__instance.weapon.weaponDef.Description.Id == "Weapon_TAG_Standard_0-STOCK")
+                    {
+                        return false;
+                    }
+                    return true;
+                }
+                catch (Exception e)
+                {
+                    Logger.Error(e);
+                    return true;
+                }
+            }
+        }
+
+
         [HarmonyPatch(typeof(Mech), "InitGameRep")]
         public static class Mech_InitStats_Patch
         {
@@ -129,7 +153,7 @@ namespace StreakMissileLaunchers.Patches
         [HarmonyPatch(typeof(AttackDirector.AttackSequence), "OnAttackSequenceWeaponPreFireComplete")]
         public static class AttackDirector_AttackSequence_OnAttackSequenceWeaponPreFireComplete_Patch
         {
-            public static void Postfix(AttackDirector.AttackSequence __instance, MessageCenterMessage message, List<List<Weapon>> ___sortedWeapons, WeaponHitInfo?[][] ___weaponHitInfo)
+            public static void Prefix(AttackDirector.AttackSequence __instance, MessageCenterMessage message, List<List<Weapon>> ___sortedWeapons, WeaponHitInfo?[][] ___weaponHitInfo)
             {
                 try
                 {
@@ -142,7 +166,7 @@ namespace StreakMissileLaunchers.Patches
                     int weaponIdx = attackSequenceWeaponPreFireCompleteMessage.weaponIdx;
                     Weapon weapon = ___sortedWeapons[groupIdx][weaponIdx];
 
-                    Logger.Info($"[AttackDirector.AttackSequence_OnAttackSequenceWeaponPreFireComplete_POSTFIX] ({weapon.parent.DisplayName}) HANDLED AttackSequence: {__instance.id}, WeaponGroup: {groupIdx}, Weapon: {weapon.Name}({weaponIdx})");
+                    Logger.Info($"[AttackDirector.AttackSequence_OnAttackSequenceWeaponPreFireComplete_PREFIX] ({weapon.parent.DisplayName}) HANDLED AttackSequence: {__instance.id}, WeaponGroup: {groupIdx}, Weapon: {weapon.Name}({weaponIdx})");
                     Logger.Info($"---");
                 }
                 catch (Exception e)
@@ -233,9 +257,72 @@ namespace StreakMissileLaunchers.Patches
                         {
                             // Force recalculation of HitOnfo by setting it to null here, triggering AttackDirector.AttackSequence.GenerateHitInfo() => AttackDirector.AttackSequence.GetIndividualHits()
                             // There the hit chance of all missiles is set to 1f -> All missiles hit!
-                            ___weaponHitInfo[groupIdx][weaponIdx] = null;
 
-                            return true;
+
+                            //___weaponHitInfo[groupIdx][weaponIdx] = null;
+                            //return true;
+
+                            //Rebuild orignal method
+                            int num = ___numberOfShots[groupIdx][weaponIdx];
+
+                            weapon.FireWeapon();
+
+                            WeaponHitInfo? weaponHitInfo = ___weaponHitInfo[groupIdx][weaponIdx];
+                            WeaponHitInfo weaponHitInfo2;
+                            if (weaponHitInfo != null)
+                            {
+                                weaponHitInfo2 = weaponHitInfo.Value;
+                                __instance.AddAllAffectedTargets(weaponHitInfo2);
+                            }
+                            else
+                            {
+                                AttackDirector.AttackSequence.logger.LogError("[OnAttackSequenceFire] had to generate hit info because pre-calculated hit info was not available!");
+                                //weaponHitInfo2 = __instance.GenerateHitInfo(weapon, groupIdx, weaponIdx, num, __instance.indirectFire, 0f);
+
+                                //Traverse GenerateHitInfo = Traverse.Create(__instance).Method("GenerateHitInfo");
+                                //var weaponHitInfo2 = GenerateHitInfo.GetValue(new object[] { weapon, groupIdx, weaponIdx, num, __instance.indirectFire, 0f });
+
+                                FastInvokeHandler AttackSequenceGenerateHitInfo;
+                                MethodInfo mi = AccessTools.Method(typeof(AttackDirector.AttackSequence), "GenerateHitInfo");
+                                AttackSequenceGenerateHitInfo = MethodInvoker.GetHandler(mi);
+                                weaponHitInfo2 = (WeaponHitInfo)AttackSequenceGenerateHitInfo.Invoke(__instance, new object[] { weapon, groupIdx, weaponIdx, num, __instance.indirectFire, 0f });
+
+                                __instance.AddAllAffectedTargets(weaponHitInfo2);
+                            }
+
+                            weapon.CompleteFiring();
+
+                            foreach (EffectData effectData in weapon.weaponDef.statusEffects)
+                            {
+                                if (effectData.targetingData.effectTriggerType == EffectTriggerType.OnActivation)
+                                {
+                                    string effectID = string.Format("{0}Effect_{1}_{2}", effectData.targetingData.effectTriggerType.ToString(), weapon.parent.GUID, weaponHitInfo2.attackSequenceId);
+                                    foreach (ICombatant combatant in __instance.Director.Combat.EffectManager.GetTargetCombatantForEffect(effectData, weapon.parent, __instance.chosenTarget))
+                                    {
+                                        __instance.Director.Combat.EffectManager.CreateEffect(effectData, effectID, __instance.stackItemUID, weapon.parent, combatant, weaponHitInfo2, weaponIdx, false);
+                                        if (!effectData.targetingData.hideApplicationFloatie)
+                                        {
+                                            __instance.Director.Combat.MessageCenter.PublishMessage(new FloatieMessage(weapon.parent.GUID, weapon.parent.GUID, effectData.Description.Name, FloatieMessage.MessageNature.Buff));
+                                        }
+                                        if (!effectData.targetingData.hideApplicationFloatie)
+                                        {
+                                            __instance.Director.Combat.MessageCenter.PublishMessage(new FloatieMessage(weapon.parent.GUID, combatant.GUID, effectData.Description.Name, FloatieMessage.MessageNature.Buff));
+                                        }
+                                    }
+                                }
+                            }
+
+                            bool flag = weapon.weaponRep != null && weapon.weaponRep.HasWeaponEffect;
+                            if (DebugBridge.TestToolsEnabled)
+                            {
+                                flag = (flag && !DebugBridge.DisableWeaponEffectDrivenAttacks);
+                            }
+                            if (flag)
+                            {
+                                weapon.weaponRep.PlayWeaponEffect(weaponHitInfo2);
+                            }
+
+                            return false;
                         }
                         else
                         {
@@ -262,10 +349,10 @@ namespace StreakMissileLaunchers.Patches
 
                             // Cancel firing, send messages to signal completion of handling this weapon
                             // BEWARE: If these messages are sent too early the order of handled weapons will be disturbed with chaotic consequences for the sequence!!!
-                            //AttackSequenceWeaponPreFireCompleteMessage messageWeaponPreFireComplete = new AttackSequenceWeaponPreFireCompleteMessage(__instance.stackItemUID, __instance.id, groupIdx, weaponIdx);
-                            //__instance.Director.Combat.MessageCenter.PublishMessage(messageWeaponPreFireComplete);
-                            //AttackSequenceWeaponCompleteMessage messageWeaponComplete = new AttackSequenceWeaponCompleteMessage(__instance.stackItemUID, __instance.id, groupIdx, weaponIdx);
-                            //__instance.Director.Combat.MessageCenter.PublishMessage(messageWeaponComplete);
+                            AttackSequenceWeaponPreFireCompleteMessage messageWeaponPreFireComplete = new AttackSequenceWeaponPreFireCompleteMessage(__instance.stackItemUID, __instance.id, groupIdx, weaponIdx);
+                            __instance.Director.Combat.MessageCenter.PublishMessage(messageWeaponPreFireComplete);
+                            AttackSequenceWeaponCompleteMessage messageWeaponComplete = new AttackSequenceWeaponCompleteMessage(__instance.stackItemUID, __instance.id, groupIdx, weaponIdx);
+                            __instance.Director.Combat.MessageCenter.PublishMessage(messageWeaponComplete);
 
                             return false;
                         }
@@ -284,30 +371,8 @@ namespace StreakMissileLaunchers.Patches
 
             public static void Postfix(AttackDirector.AttackSequence __instance, MessageCenterMessage message, List<List<Weapon>> ___sortedWeapons, ref int[][] ___numberOfShots, ref WeaponHitInfo?[][] ___weaponHitInfo)
             {
-                /*
-                AttackSequenceFireMessage attackSequenceFireMessage = (AttackSequenceFireMessage)message;
-                if (attackSequenceFireMessage.sequenceId != __instance.id)
-                {
-                    return;
-                }
-                int groupIdx = attackSequenceFireMessage.groupIdx;
-                int weaponIdx = attackSequenceFireMessage.weaponIdx;
-                */
-
                 if (StreakScopeEnabled)
                 {
-                    /*
-                    if (!StreakWillHit)
-                    {
-                        // Sent messages for the canceled shots to prevent stalling the whole sequence
-                        AttackSequenceWeaponPreFireCompleteMessage messageWeaponPreFireComplete = new AttackSequenceWeaponPreFireCompleteMessage(__instance.stackItemUID, __instance.id, groupIdx, weaponIdx);
-                        __instance.Director.Combat.MessageCenter.PublishMessage(messageWeaponPreFireComplete);
-                        AttackSequenceWeaponCompleteMessage messageWeaponComplete = new AttackSequenceWeaponCompleteMessage(__instance.stackItemUID, __instance.id, groupIdx, weaponIdx);
-                        __instance.Director.Combat.MessageCenter.PublishMessage(messageWeaponComplete);
-                    }
-                    */
-
-
                     StreakScopeEnabled = false;
                     Logger.Info($"[AttackDirector.AttackSequence_OnAttackSequenceFire_POSTFIX] StreaksScopeEnabled: {StreakScopeEnabled}");
                     Logger.Info($"---");
