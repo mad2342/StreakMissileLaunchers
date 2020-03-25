@@ -9,15 +9,16 @@ namespace StreakMissileLaunchers.Patches
     [HarmonyPatch(typeof(MissileLauncherEffect), "Init")]
     public static class MissileLauncherEffect_Init_Patch
     {
+        // Raising the preFireDuration for Steak SRM launchers to give their targeting laser enough time to display their vfx
         public static void Prefix(MissileLauncherEffect __instance, Weapon weapon)
         {
             try
             {
                 Logger.Info($"[MissileLauncherEffect_Init_PREFIX] weapon.parent.DisplayName: {weapon.parent.DisplayName}");
                 Logger.Info($"[MissileLauncherEffect_Init_PREFIX] weapon.Name: {weapon.Name}");
-                Logger.Info($"[MissileLauncherEffect_Init_PREFIX] BEFORE MissileLauncherEffect.preFireDuration: {__instance.preFireDuration}");
+                Logger.Info($"[MissileLauncherEffect_Init_PREFIX] MissileLauncherEffect.preFireDuration: {__instance.preFireDuration}");
 
-                if (weapon.AmmoCategoryValue.Name == "SRMStreak")
+                if (weapon.Type == WeaponType.SRM && weapon.AmmoCategoryValue.Name == "SRMStreak")
                 {
                     __instance.preFireDuration = 0.9f;
                     Logger.Debug($"[MissileLauncherEffect_Init_PREFIX] ({weapon.parent.DisplayName}) Raised preFireDuration for {weapon.Name} to {__instance.preFireDuration}");
@@ -30,7 +31,7 @@ namespace StreakMissileLaunchers.Patches
         }
     }
 
-    // Get Info
+    // Info
     [HarmonyPatch(typeof(WeaponEffect), "Init")]
     public static class WeaponEffect_Init_Patch
     {
@@ -48,7 +49,7 @@ namespace StreakMissileLaunchers.Patches
         }
     }
 
-    // Get Info
+    // Info
     [HarmonyPatch(typeof(LaserEffect), "SetupLaser")]
     public static class LaserEffect_SetupLaser_Patch
     {

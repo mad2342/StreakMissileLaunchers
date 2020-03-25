@@ -4,6 +4,7 @@ using Harmony;
 
 namespace StreakMissileLaunchers.Patches
 {
+    /*
     [HarmonyPatch(typeof(Mech), "InitGameRep")]
     public static class Mech_InitGameRep_Patch
     {
@@ -28,11 +29,11 @@ namespace StreakMissileLaunchers.Patches
 
                     // @ToDo: Also handle vehicles and turrets?
                     WeaponDef weaponDef = __instance.Combat.DataManager.WeaponDefs.Get(Fields.StreakTargetingLaserId);
-                    MechComponentRef mechComponentRef = new MechComponentRef(weaponDef.Description.Id, weaponDef.Description.Id + "_StreakTargetingLaser", ComponentType.Weapon, ChassisLocations.CenterTorso, -1, ComponentDamageLevel.Functional, false);
+                    MechComponentRef mechComponentRef = new MechComponentRef(weaponDef.Description.Id, weaponDef.Description.Id + "_Reference", ComponentType.Weapon, ChassisLocations.CenterTorso, -1, ComponentDamageLevel.Functional, false);
                     mechComponentRef.SetComponentDef(weaponDef);
                     mechComponentRef.DataManager = __instance.Combat.DataManager;
                     mechComponentRef.RefreshComponentDef();
-                    Weapon TargetingLaser = new Weapon(__instance, __instance.Combat, mechComponentRef, __instance.GUID + "_StreakTargetingLaser");
+                    Weapon TargetingLaser = new Weapon(__instance, __instance.Combat, mechComponentRef, weaponDef.Description.Id + __instance.GUID);
                     TargetingLaser.Init();
                     TargetingLaser.InitStats();
 
@@ -52,4 +53,5 @@ namespace StreakMissileLaunchers.Patches
             }
         }
     }
+    */
 }

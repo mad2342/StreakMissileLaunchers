@@ -29,10 +29,11 @@ namespace StreakMissileLaunchers.Patches
             try
             {
                 //Logger.Info($"[AttackDirector.AttackSequence_GetIndividualHits_PREFIX] Streaks.streaksScopeEnabled: {Streaks.streaksScopeEnabled}");
-                if (Fields.StreakScopeEnabled && weapon.Type == WeaponType.SRM && weapon.AmmoCategoryValue.Name == "SRMStreak")
+                if (weapon.Type == WeaponType.SRM && weapon.AmmoCategoryValue.Name == "SRMStreak")
                 {
                     Logger.Info($"[AttackDirector.AttackSequence_GetIndividualHits_PREFIX] ---");
                     Logger.Info($"[AttackDirector.AttackSequence_GetIndividualHits_PREFIX] ({weapon.Name}) toHitChance: {toHitChance}");
+                    Logger.Info($"[AttackDirector.AttackSequence_GetIndividualHits_PREFIX] ({weapon.Name}) Fields.StreakWillHit: {Fields.StreakWillHit}");
 
                     if (Fields.StreakWillHit)
                     {
@@ -112,15 +113,11 @@ namespace StreakMissileLaunchers.Patches
                 Logger.Debug($"---");
                 Logger.Debug($"[AttackDirector.AttackSequence_OnAttackSequenceFire_PREFIX] ({weapon.parent.DisplayName}) STARTED AttackSequence: {__instance.id}, WeaponGroup: {groupIdx}, Weapon: {weapon.Name}({weaponIdx})");
 
-                //if(weapon.weaponDef.ComponentTags.Contains("component_type_streak"))
-
-                // Test
+                //if(weapon.weaponDef.ComponentTags.Contains("component_type_srmstreak"))
                 if (weapon.Type == WeaponType.SRM && weapon.AmmoCategoryValue.Name == "SRMStreak")
                 {
-                    // Enable scope for depending methods and reset hit indicator
-                    Fields.StreakScopeEnabled = true;
+                    // Reset hit indicator
                     Fields.StreakWillHit = false;
-                    Logger.Info($"[AttackDirector.AttackSequence_OnAttackSequenceFire_PREFIX] Fields.StreaksScopeEnabled: {Fields.StreakScopeEnabled}");
 
                     float hitChance = __instance.Director.Combat.ToHit.GetToHitChance(__instance.attacker, weapon, __instance.chosenTarget, __instance.attackPosition, __instance.chosenTarget.CurrentPosition, __instance.numTargets, __instance.meleeAttackType, __instance.isMoraleAttack);
                     Logger.Info($"[AttackDirector.AttackSequence_OnAttackSequenceFire_PREFIX] ({weapon.Name}) hitChance: {hitChance}");
@@ -133,10 +130,8 @@ namespace StreakMissileLaunchers.Patches
 
 
 
-                    // @ToDo: Try to play some weapon effect to imitate targeting lasers
-                    Utilities.FireStreakTargetingLaser(__instance, weapon.parent, Fields.StreakWillHit);
-
-
+                    //Utilities.FireStreakTargetingLaser(__instance, weapon.parent, Fields.StreakWillHit);
+                    Utilities.CreateAndFireStreakTargetingLaser(__instance, weapon, Fields.StreakWillHit);
 
 
 
@@ -179,6 +174,7 @@ namespace StreakMissileLaunchers.Patches
             }
         }
 
+        /*
         public static void Postfix(AttackDirector.AttackSequence __instance, MessageCenterMessage message, List<List<Weapon>> ___sortedWeapons, ref int[][] ___numberOfShots, ref WeaponHitInfo?[][] ___weaponHitInfo)
         {
             if (Fields.StreakScopeEnabled)
@@ -188,5 +184,6 @@ namespace StreakMissileLaunchers.Patches
                 Logger.Info($"---");
             }
         }
+        */
     }
 }

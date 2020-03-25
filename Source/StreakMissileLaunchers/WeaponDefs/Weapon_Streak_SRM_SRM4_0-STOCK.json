@@ -29,7 +29,7 @@
     "Instability": 3,
     "WeaponEffectID": "WeaponEffect-Weapon_SRM4",
     "Description": {
-        "Cost": 600000,
+        "Cost": 240000,
         "Rarity": 5,
         "Purchasable": true,
         "Manufacturer": "TharHes",
@@ -37,10 +37,10 @@
         "UIName": "Streak SRM4",
         "Id": "Weapon_Streak_SRM_SRM4_0-STOCK",
         "Name": "Streak SRM4",
-        "Details": "The midtier rack of Streak Short-Range Missiles, Streak SRM4s deal good damage for comparatively few negatives other than their inherently short range and need for ammunition. As for all Streak SRMs, the Streak SRM6 launcher incorporates a unique fire control system which will prevent the missiles from launching if a hit is not guaranteed.",
+        "Details": "The midtier rack of Streak Short-Range Missiles, Streak SRM4s deal good damage for comparatively few negatives other than their inherently short range and need for ammunition. As for all Streak SRMs, the Streak SRM6 launcher incorporates a unique fire control system(FCS) which will prevent the missiles from launching if a hit is not guaranteed.",
         "Icon": "uixSvgIcon_weapon_Missile"
     },
-    "BonusValueA": "Fire Control",
+    "BonusValueA": "FCS",
     "BonusValueB": "+ 1 Acc.",
     "ComponentType": "Weapon",
     "ComponentSubType": "Weapon",
