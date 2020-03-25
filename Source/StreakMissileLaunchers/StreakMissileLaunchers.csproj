@@ -46,12 +46,19 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\Ref\UnityEngine.CoreModule.dll</HintPath>
     </Reference>
+    <Reference Include="UnityEngine.ParticleSystemModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\Ref\UnityEngine.ParticleSystemModule.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\..\..\Link\MadLogger.cs">
       <Link>MadLogger.cs</Link>
     </Compile>
+    <Compile Include="Holder.cs" />
     <Compile Include="Patches\AttackDirectorAttackSequence.cs" />
+    <Compile Include="Patches\Mech.cs" />
+    <Compile Include="Patches\WeaponEffect.cs" />
     <Compile Include="StreakMissileLaunchers.cs" />
     <Compile Include="Extensions\Weapon.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -61,6 +68,10 @@
   <ItemGroup>
     <None Include="mod.json" />
     <None Include="README.md" />
+    <None Include="AmmoCategories\*.json" />
+    <None Include="AmmunitionDefs\Ammunition_SRMStreak.json" />
+    <None Include="AmmunitionBoxDefs\*.json" />
+    <None Include="WeaponDefs\*.json" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
@@ -69,6 +80,10 @@ xcopy $(TargetPath) $(SolutionDir)..\Release\$(TargetName)\ /Y
 xcopy $(ProjectDir)mod.json $(SolutionDir)..\Release\$(TargetName)\ /Y
 xcopy $(ProjectDir)README.md $(SolutionDir)..\Release\$(TargetName)\ /Y
 xcopy $(ProjectDir)README.md $(SolutionDir)..\ /Y
+xcopy $(ProjectDir)AmmoCategories\* $(SolutionDir)..\Release\$(TargetName)\AmmoCategories\ /Y /S
+xcopy $(ProjectDir)AmmunitionDefs\* $(SolutionDir)..\Release\$(TargetName)\AmmunitionDefs\ /Y /S
+xcopy $(ProjectDir)AmmunitionBoxDefs\* $(SolutionDir)..\Release\$(TargetName)\AmmunitionBoxDefs\ /Y /S
+xcopy $(ProjectDir)WeaponDefs\* $(SolutionDir)..\Release\$(TargetName)\WeaponDefs\ /Y /S
     </PostBuildEvent>
   </PropertyGroup>
 </Project>

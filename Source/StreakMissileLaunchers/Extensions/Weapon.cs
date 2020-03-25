@@ -2,7 +2,7 @@
 
 namespace StreakMissileLaunchers.Extensions
 {
-    public static class WeaponExtensions
+    internal static class WeaponExtensions
     {
         public static void OffsetAmmo(this Weapon weapon)
         {
