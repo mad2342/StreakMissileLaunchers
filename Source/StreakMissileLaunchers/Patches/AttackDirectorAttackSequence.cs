@@ -28,8 +28,8 @@ namespace StreakMissileLaunchers.Patches
         {
             try
             {
-                //Logger.Info($"[AttackDirector.AttackSequence_GetIndividualHits_PREFIX] Streaks.streaksScopeEnabled: {Streaks.streaksScopeEnabled}");
-                if (weapon.Type == WeaponType.SRM && weapon.AmmoCategoryValue.Name == "SRMStreak")
+                //Logger.Info($"[AttackDirector.AttackSequence_GetIndividualHits_PREFIX] Fields.StreakScopeEnabled: {Fields.StreakScopeEnabled}");
+                if (Fields.StreakScopeEnabled && weapon.Type == WeaponType.SRM && weapon.AmmoCategoryValue.Name == "SRMStreak")
                 {
                     Logger.Info($"[AttackDirector.AttackSequence_GetIndividualHits_PREFIX] ---");
                     Logger.Info($"[AttackDirector.AttackSequence_GetIndividualHits_PREFIX] ({weapon.Name}) toHitChance: {toHitChance}");
@@ -116,6 +116,8 @@ namespace StreakMissileLaunchers.Patches
                 //if(weapon.weaponDef.ComponentTags.Contains("component_type_srmstreak"))
                 if (weapon.Type == WeaponType.SRM && weapon.AmmoCategoryValue.Name == "SRMStreak")
                 {
+                    Fields.StreakScopeEnabled = true;
+
                     // Reset hit indicator
                     Fields.StreakWillHit = false;
 
@@ -167,23 +169,15 @@ namespace StreakMissileLaunchers.Patches
                         }
                     }
                 }
+                else
+                {
+                    Fields.StreakScopeEnabled = false;
+                }
             }
             catch (Exception e)
             {
                 Logger.Error(e);
             }
         }
-
-        /*
-        public static void Postfix(AttackDirector.AttackSequence __instance, MessageCenterMessage message, List<List<Weapon>> ___sortedWeapons, ref int[][] ___numberOfShots, ref WeaponHitInfo?[][] ___weaponHitInfo)
-        {
-            if (Fields.StreakScopeEnabled)
-            {
-                Fields.StreakScopeEnabled = false;
-                Logger.Info($"[AttackDirector.AttackSequence_OnAttackSequenceFire_POSTFIX] Fields.StreaksScopeEnabled: {Fields.StreakScopeEnabled}");
-                Logger.Info($"---");
-            }
-        }
-        */
     }
 }
