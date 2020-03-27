@@ -4,6 +4,7 @@ using System.Reflection;
 using BattleTech;
 using Harmony;
 using StreakMissileLaunchers.Extensions;
+using UnityEngine;
 
 namespace StreakMissileLaunchers.Patches
 {
@@ -28,23 +29,52 @@ namespace StreakMissileLaunchers.Patches
         {
             try
             {
-                //Logger.Info($"[AttackDirector.AttackSequence_GetIndividualHits_PREFIX] Fields.StreakScopeEnabled: {Fields.StreakScopeEnabled}");
-                if (Fields.StreakScopeEnabled && weapon.Type == WeaponType.SRM && weapon.AmmoCategoryValue.Name == "SRMStreak")
+                if (weapon.Type == WeaponType.SRM && weapon.AmmoCategoryValue.Name == "SRMStreak")
                 {
-                    Logger.Info($"[AttackDirector.AttackSequence_GetIndividualHits_PREFIX] ---");
+                    Logger.Debug($"[AttackDirector.AttackSequence_GetIndividualHits_PREFIX] ---");
+                    Logger.Debug($"[AttackSequence_GetIndividualHits_PREFIX] ({weapon.parent.DisplayName}) PREPARE AttackSequence: {__instance.id}, WeaponGroup: {groupIdx}, Weapon: {weapon.Name}({weaponIdx})");
                     Logger.Info($"[AttackDirector.AttackSequence_GetIndividualHits_PREFIX] ({weapon.Name}) toHitChance: {toHitChance}");
-                    Logger.Info($"[AttackDirector.AttackSequence_GetIndividualHits_PREFIX] ({weapon.Name}) Fields.StreakWillHit: {Fields.StreakWillHit}");
 
-                    if (Fields.StreakWillHit)
+                    float hitChance = __instance.Director.Combat.ToHit.GetToHitChance(__instance.attacker, weapon, __instance.chosenTarget, __instance.attackPosition, __instance.chosenTarget.CurrentPosition, __instance.numTargets, __instance.meleeAttackType, __instance.isMoraleAttack);
+                    Logger.Info($"[AttackDirector.AttackSequence_OnAttackSequenceFire_PREFIX] ({weapon.Name}) hitChance: {hitChance}");
+
+                    float hitRoll = UnityEngine.Random.Range(0f, 1f);
+                    Logger.Info($"[AttackDirector.AttackSequence_OnAttackSequenceFire_PREFIX] ({weapon.Name}) hitRoll: {hitRoll}");
+
+                    bool streakWillHit = hitRoll <= hitChance;
+                    Logger.Debug($"[AttackDirector.AttackSequence_OnAttackSequenceFire_PREFIX] ({weapon.Name}) streakWillHit: {streakWillHit}");
+
+                    if (streakWillHit)
                     {
                         toHitChance = 1f;
+                    }
+                    else
+                    {
+                        toHitChance = 0f;
                     }
                     Logger.Info($"[AttackDirector.AttackSequence_GetIndividualHits_PREFIX] ({weapon.Name}) toHitChance: {toHitChance}");
 
                     // Redirecting to hit determination method for clustered hits (LRMs only by default)
                     AttackSequenceGetClusteredHits.Invoke(__instance, new object[] { hitInfo, groupIdx, weaponIdx, weapon, toHitChance, prevDodgedDamage });
+                    Logger.Info($"[AttackDirector.AttackSequence_GetIndividualHits_PREFIX] ({weapon.Name}) Fetched clustered hits...");
 
-                    Logger.Info($"[AttackDirector.AttackSequence_GetIndividualHits_PREFIX] ({weapon.Name}) Determining clustered hits...");
+                    if (streakWillHit)
+                    {
+                        // Needed? (Mark hitInfo depending on streakWillHit to be able to evaluate later)
+                        //hitInfo.dodgeSuccesses[i] = false;
+                    }
+                    else
+                    {
+                        // Make absolutely sure NO missile hits (Needed because of roll correction in AttackDirector.AttackSequence.GetClusteredHits())
+                        for (int i = 0; i < hitInfo.numberOfShots; i++)
+                        {
+                            if (hitInfo.hitLocations[i] != 0)
+                            {
+                                hitInfo.hitLocations[i] = 0;
+                                hitInfo.hitPositions[i] = __instance.chosenTarget.GetImpactPosition(__instance.attacker, __instance.attackPosition, weapon, ref hitInfo.hitLocations[i], ref hitInfo.attackDirections[i], ref hitInfo.secondaryTargetIds[i], ref hitInfo.secondaryHitLocations[i]);
+                            }
+                        }
+                    }
                     Utilities.LogHitLocations(hitInfo);
 
                     // Hit locations are set, skipping original method...
@@ -97,14 +127,14 @@ namespace StreakMissileLaunchers.Patches
     [HarmonyPatch(typeof(AttackDirector.AttackSequence), "OnAttackSequenceFire")]
     public static class AttackDirector_AttackSequence_OnAttackSequenceFire_Patch
     {
-        public static void Prefix(AttackDirector.AttackSequence __instance, MessageCenterMessage message, List<List<Weapon>> ___sortedWeapons, ref int[][] ___numberOfShots, ref WeaponHitInfo?[][] ___weaponHitInfo)
+        public static bool Prefix(AttackDirector.AttackSequence __instance, MessageCenterMessage message, List<List<Weapon>> ___sortedWeapons, ref int[][] ___numberOfShots, ref WeaponHitInfo?[][] ___weaponHitInfo)
         {
             try
             {
                 AttackSequenceFireMessage attackSequenceFireMessage = (AttackSequenceFireMessage)message;
                 if (attackSequenceFireMessage.sequenceId != __instance.id)
                 {
-                    return;
+                    return false;
                 }
                 int groupIdx = attackSequenceFireMessage.groupIdx;
                 int weaponIdx = attackSequenceFireMessage.weaponIdx;
@@ -116,67 +146,83 @@ namespace StreakMissileLaunchers.Patches
                 //if(weapon.weaponDef.ComponentTags.Contains("component_type_srmstreak"))
                 if (weapon.Type == WeaponType.SRM && weapon.AmmoCategoryValue.Name == "SRMStreak")
                 {
-                    Fields.StreakScopeEnabled = true;
+                    WeaponHitInfo weaponHitInfo = ___weaponHitInfo[groupIdx][weaponIdx].Value;
+                    bool streakWillHit = weaponHitInfo.DidShotHitChosenTarget(0); // If first missile hits/misses, all will hit/miss
+                    Logger.Info($"[AttackDirector.AttackSequence_OnAttackSequenceFire_PREFIX] ({weapon.Name}) streakWillHit: {streakWillHit}");
 
-                    // Reset hit indicator
-                    Fields.StreakWillHit = false;
+                    // Fire targeting laser
+                    Vector3 impactVector = new Vector3();
+                    Utilities.CreateAndFireStreakTargetingLaser(__instance, weapon, out impactVector, streakWillHit);
 
-                    float hitChance = __instance.Director.Combat.ToHit.GetToHitChance(__instance.attacker, weapon, __instance.chosenTarget, __instance.attackPosition, __instance.chosenTarget.CurrentPosition, __instance.numTargets, __instance.meleeAttackType, __instance.isMoraleAttack);
-                    Logger.Info($"[AttackDirector.AttackSequence_OnAttackSequenceFire_PREFIX] ({weapon.Name}) hitChance: {hitChance}");
-
-                    float hitRoll = UnityEngine.Random.Range(0f, 1f);
-                    Logger.Info($"[AttackDirector.AttackSequence_OnAttackSequenceFire_PREFIX] ({weapon.Name}) hitRoll: {hitRoll}");
-
-                    Fields.StreakWillHit = hitRoll <= hitChance;
-                    Logger.Debug($"[AttackDirector.AttackSequence_OnAttackSequenceFire_PREFIX] ({weapon.Name}) Fields.StreaksWillHit: {Fields.StreakWillHit}");
-
-
-
-                    //Utilities.FireStreakTargetingLaser(__instance, weapon.parent, Fields.StreakWillHit);
-                    Utilities.CreateAndFireStreakTargetingLaser(__instance, weapon, Fields.StreakWillHit);
-
-
-
-                    if (Fields.StreakWillHit)
+                    if (streakWillHit)
                     {
-                        // Force recalculation of HitOnfo by setting it to null here, triggering AttackDirector.AttackSequence.GenerateHitInfo() => AttackDirector.AttackSequence.GetIndividualHits()
-                        // There the hit chance of all missiles is set to 1f -> All missiles hit!
+                        // Only floaties, everything else is prepared at this point
 
-                        ___weaponHitInfo[groupIdx][weaponIdx] = null;
-                        return;
+                        // Big Floatie
+                        //__instance.Director.Combat.MessageCenter.PublishMessage(new FloatieMessage(__instance.chosenTarget.GUID, __instance.chosenTarget.GUID, "STREAK LOCKED-ON", FloatieMessage.MessageNature.CriticalHit));
+
+                        // Small Floatie
+                        FloatieMessage hitFloatie = new FloatieMessage(__instance.attacker.GUID, __instance.chosenTarget.GUID, "STREAK LOCKED-ON", __instance.Director.Combat.Constants.CombatUIConstants.floatieSizeMedium, FloatieMessage.MessageNature.Dodge, impactVector.x, impactVector.y, impactVector.z);
+                        __instance.Director.Combat.MessageCenter.PublishMessage(hitFloatie);
+
+                        return true;
                     }
                     else
                     {
-                        Logger.Info($"[AttackDirector.AttackSequence_OnAttackSequenceFire_PREFIX] ({weapon.Name}) Lock on failed, set ___numberOfShots to -1");
-
-                        // This should cancel firing, see code of original method...
-                        ___numberOfShots[groupIdx][weaponIdx] = -1;
+                        // Cancel firing, see code of original method...
 
                         // Mark Streak SRMs as having fired nevertheless because a failed lock on should be handled like "fired"
                         new Traverse(weapon).Property("HasFired").SetValue(true);
                         weapon.CompleteFiring();
                         Logger.Info($"[AttackDirector.AttackSequence_OnAttackSequenceFire_PREFIX] ({weapon.Name}) HasFired: {weapon.HasFired}, RoundsSinceLastFire: {weapon.roundsSinceLastFire}");
 
-                        // Floaties
-                        __instance.Director.Combat.MessageCenter.PublishMessage(new FloatieMessage(weapon.parent.GUID, weapon.parent.GUID, "STREAK LOCK-ON FAILED", FloatieMessage.MessageNature.Debuff));
-                        __instance.Director.Combat.MessageCenter.PublishMessage(new FloatieMessage(__instance.chosenTarget.GUID, __instance.chosenTarget.GUID, "STREAK LOCK-ON AVOIDED", FloatieMessage.MessageNature.Buff));
-
-                        // If weapon already prefired we would need to reincrement ammo
-                        // Note that Weapon.OffsetAmmo() is a custom extension method
+                        // If weapon already prefired we would need to reincrement ammo (Note that Weapon.OffsetAmmo() is a custom extension method)
                         if (weapon.HasPreFired)
                         {
                             weapon.OffsetAmmo();
                         }
+
+                        // Send out all necessary messages to keep the current AttackSequence in sync
+                        AttackSequenceWeaponPreFireCompleteMessage weaponPreFireCompleteMessage = new AttackSequenceWeaponPreFireCompleteMessage(__instance.stackItemUID, __instance.id, groupIdx, weaponIdx);
+                        __instance.Director.Combat.MessageCenter.PublishMessage(weaponPreFireCompleteMessage);
+
+                        int numberOfShots = ___numberOfShots[groupIdx][weaponIdx];
+                        for (int j = 0; j < numberOfShots; j++)
+                        {
+                            float hitDamage = weapon.DamagePerShotAdjusted(weapon.parent.occupiedDesignMask);
+                            float structureDamage = weapon.StructureDamagePerShotAdjusted(weapon.parent.occupiedDesignMask);
+                            AttackSequenceImpactMessage impactMessage = new AttackSequenceImpactMessage(weaponHitInfo, j, hitDamage, structureDamage);
+                            __instance.Director.Combat.MessageCenter.PublishMessage(impactMessage);
+                        }
+
+                        AttackSequenceResolveDamageMessage resolveDamageMessage = new AttackSequenceResolveDamageMessage(weaponHitInfo);
+                        __instance.Director.Combat.MessageCenter.PublishMessage(resolveDamageMessage);
+
+                        AttackSequenceWeaponCompleteMessage weaponCompleteMessage = new AttackSequenceWeaponCompleteMessage(__instance.stackItemUID, __instance.id, groupIdx, weaponIdx);
+                        __instance.Director.Combat.MessageCenter.PublishMessage(weaponCompleteMessage);
+
+                        // Big Floaties
+                        //__instance.Director.Combat.MessageCenter.PublishMessage(new FloatieMessage(weapon.parent.GUID, weapon.parent.GUID, "STREAK LOCK-ON FAILED", FloatieMessage.MessageNature.Debuff));
+                        //__instance.Director.Combat.MessageCenter.PublishMessage(new FloatieMessage(__instance.chosenTarget.GUID, __instance.chosenTarget.GUID, "STREAK LOCK-ON AVOIDED", FloatieMessage.MessageNature.Buff));
+
+                        // Small Floatie
+                        FloatieMessage missFloatie = new FloatieMessage(__instance.attacker.GUID, __instance.chosenTarget.GUID, "STREAK LOCK-ON FAILED", __instance.Director.Combat.Constants.CombatUIConstants.floatieSizeMedium, FloatieMessage.MessageNature.Dodge, impactVector.x, impactVector.y, impactVector.z);
+                        __instance.Director.Combat.MessageCenter.PublishMessage(missFloatie);
+
+
+
+                        // Skip original method!
+                        return false;
                     }
                 }
-                else
-                {
-                    Fields.StreakScopeEnabled = false;
-                }
+
+                return true;
             }
             catch (Exception e)
             {
                 Logger.Error(e);
+
+                return true;
             }
         }
     }

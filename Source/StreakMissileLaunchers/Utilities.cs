@@ -7,14 +7,20 @@ namespace StreakMissileLaunchers
 {
     class Utilities
     {
-        public static void CreateAndFireStreakTargetingLaser(AttackDirector.AttackSequence sequence, Weapon baseWeapon, bool hitsTarget = true)
+        public static void CreateAndFireStreakTargetingLaser(AttackDirector.AttackSequence sequence, Weapon baseWeapon, out Vector3 impactVector, bool hitsTarget = true)
         {
+            //@ToDo: Make this work for turrets and vehicles too
+
+            impactVector = sequence.chosenTarget.CurrentPosition;
             AbstractActor actor = baseWeapon.parent;
+
             if (!(actor is Mech mech))
             {
                 return;
             }
             Logger.Debug($"[Utilities_CreateAndFireStreakTargetingLaser] {actor.DisplayName} prepares its targeting laser for weapon: {baseWeapon.Name}");
+
+            
 
             // Borrowed from AbstractActor.InitAbilities()
             WeaponDef weaponDef = actor.Combat.DataManager.WeaponDefs.Get(Fields.StreakTargetingLaserId);
@@ -25,11 +31,9 @@ namespace StreakMissileLaunchers
             Weapon TargetingLaser = new Weapon(mech, actor.Combat, mechComponentRef, weaponDef.Description.Id + baseWeapon.GUID);
             TargetingLaser.Init();
             TargetingLaser.InitStats();
+            //Logger.Debug($"[Utilities_CreateAndFireStreakTargetingLaser] TargetingLaser.Name: {TargetingLaser.Name}, TargetingLaser.uid: {TargetingLaser.uid}, TargetingLaser.GUID: {TargetingLaser.GUID}");
 
-            Logger.Debug($"[Utilities_CreateAndFireStreakTargetingLaser] TargetingLaser.Name: {TargetingLaser.Name}, TargetingLaser.uid: {TargetingLaser.uid}, TargetingLaser.GUID: {TargetingLaser.GUID}");
 
-            // Needed? (Just a list)
-            //mech.supportComponents.Add(TargetingLaser);
 
             // Borrowed from Mech.InitGameRep()
             List<string> usedPrefabNames = new List<string>();
@@ -54,6 +58,7 @@ namespace StreakMissileLaunchers
             TargetingLaser.weaponRep.OnPlayerVisibilityChanged(VisibilityLevel.None);
 
 
+
             // Generate WeaponHitInfo for targeting laser
             float randomFloat = UnityEngine.Random.Range(0f, 1f);
 
@@ -61,10 +66,14 @@ namespace StreakMissileLaunchers
             targetingLaserHitInfo.attackerId = sequence.attacker.GUID;
             targetingLaserHitInfo.targetId = sequence.chosenTarget.GUID;
             targetingLaserHitInfo.numberOfShots = 1;
-            targetingLaserHitInfo.stackItemUID = sequence.stackItemUID;
-            targetingLaserHitInfo.attackSequenceId = sequence.id;
-            targetingLaserHitInfo.attackGroupIndex = 0;
-            targetingLaserHitInfo.attackWeaponIndex = 0;
+            //targetingLaserHitInfo.stackItemUID = sequence.stackItemUID;
+            //targetingLaserHitInfo.attackSequenceId = sequence.id;
+            //targetingLaserHitInfo.attackGroupIndex = 0;
+            //targetingLaserHitInfo.attackWeaponIndex = 0;
+            targetingLaserHitInfo.stackItemUID = -1;
+            targetingLaserHitInfo.attackSequenceId = -1;
+            targetingLaserHitInfo.attackGroupIndex = -1;
+            targetingLaserHitInfo.attackWeaponIndex = -1;
             targetingLaserHitInfo.toHitRolls = new float[1];
             targetingLaserHitInfo.locationRolls = new float[] { randomFloat };
             targetingLaserHitInfo.dodgeRolls = new float[1];
@@ -80,16 +89,19 @@ namespace StreakMissileLaunchers
             float calledShotBonusMultiplier = sequence.attacker.CalledShotBonusMultiplier;
             if (hitsTarget)
             {
-                Logger.Info($"[Utilities_CreateAndFireStreakTargetingLaser] targetingLaserHitInfo.locationRolls[0]: {targetingLaserHitInfo.locationRolls[0]}");
+                //Logger.Info($"[Utilities_CreateAndFireStreakTargetingLaser] targetingLaserHitInfo.locationRolls[0]: {targetingLaserHitInfo.locationRolls[0]}");
                 targetingLaserHitInfo.hitLocations[0] = sequence.chosenTarget.GetHitLocation(sequence.attacker, sequence.attackPosition, targetingLaserHitInfo.locationRolls[0], sequence.calledShotLocation, calledShotBonusMultiplier);
-                //hitInfo.hitQualities[i] = this.Director.Combat.ToHit.GetBlowQuality(this.attacker, this.attackPosition, TargetingLaser, this.chosenTarget, this.meleeAttackType, this.IsBreachingShot);
+                targetingLaserHitInfo.hitPositions[0] = sequence.chosenTarget.GetImpactPosition(sequence.attacker, sequence.attackPosition, TargetingLaser, ref targetingLaserHitInfo.hitLocations[0], ref targetingLaserHitInfo.attackDirections[0], ref targetingLaserHitInfo.secondaryTargetIds[0], ref targetingLaserHitInfo.secondaryHitLocations[0]);
+                impactVector = targetingLaserHitInfo.hitPositions[0];
             }
             else
             {
                 targetingLaserHitInfo.hitLocations[0] = 0; // None
+                targetingLaserHitInfo.hitPositions[0] = sequence.chosenTarget.GetImpactPosition(sequence.attacker, sequence.attackPosition, TargetingLaser, ref targetingLaserHitInfo.hitLocations[0], ref targetingLaserHitInfo.attackDirections[0], ref targetingLaserHitInfo.secondaryTargetIds[0], ref targetingLaserHitInfo.secondaryHitLocations[0]);
+                impactVector = sequence.chosenTarget.TargetPosition + UnityEngine.Random.insideUnitSphere * 5f;
             }
             Logger.Info($"[Utilities_CreateAndFireStreakTargetingLaser] targetingLaserHitInfo.hitLocations[0]: {targetingLaserHitInfo.hitLocations[0]}");
-            targetingLaserHitInfo.hitPositions[0] = sequence.chosenTarget.GetImpactPosition(sequence.attacker, sequence.attackPosition, TargetingLaser, ref targetingLaserHitInfo.hitLocations[0], ref targetingLaserHitInfo.attackDirections[0], ref targetingLaserHitInfo.secondaryTargetIds[0], ref targetingLaserHitInfo.secondaryHitLocations[0]);
+            Logger.Info($"[Utilities_CreateAndFireStreakTargetingLaser] impactVector: {impactVector}");
 
 
 
@@ -110,15 +122,8 @@ namespace StreakMissileLaunchers
 
                 // Fire
                 TargetingLaser.weaponRep.PlayWeaponEffect(targetingLaserHitInfo);
-                Logger.Debug($"[Utilities_CreateAndFireStreakTargetingLaser] {actor.DisplayName} fired its targeting laser({Fields.StreakTargetingLaserId})!");
-
-                // Sometimes the vfx of this laser persist UNTIL some targeting laser (can also be on another actor) fires and somehow clears the old "trail"
-                // Probably need to mark as complete later to prevent vfx to persist?
+                Logger.Debug($"[Utilities_CreateAndFireStreakTargetingLaser] {actor.DisplayName} fired its targeting laser({Fields.StreakTargetingLaserId})");
             }
-
-            // Cleanup? Needed? (Don't remove the TargetingLaser from the weaponRep-List, it is needed there to be removed properly when the ChassisLocation is destroyed!)
-            //mech.supportComponents.Remove(TargetingLaser);
-            //fakeTargetingLaser = null;
         }
 
 
@@ -152,83 +157,5 @@ namespace StreakMissileLaunchers
                 Logger.Error(e);
             }
         }
-
-
-
-        /*
-        public static void FireStreakTargetingLaser(AttackDirector.AttackSequence sequence, AbstractActor actor, bool hitsTarget = true)
-        {
-            foreach (Weapon weapon in actor.supportComponents)
-            {
-                if (weapon.weaponDef.Description.Id == Fields.StreakTargetingLaserId)
-                {
-                    Logger.Info($"[Utilities_FireStreakTargetingLaser] {actor.DisplayName} has a targeting laser({Fields.StreakTargetingLaserId}) prepared");
-                    Logger.Info($"[Utilities_FireStreakTargetingLaser] hitsTarget: {hitsTarget}");
-
-                    // Generate WeaponHitInfo for targeting laser
-                    float randomFloat = UnityEngine.Random.Range(0f, 1f);
-
-                    WeaponHitInfo targetingLaserHitInfo = default(WeaponHitInfo);
-                    targetingLaserHitInfo.attackerId = sequence.attacker.GUID;
-                    targetingLaserHitInfo.targetId = sequence.chosenTarget.GUID;
-                    targetingLaserHitInfo.numberOfShots = 1;
-                    targetingLaserHitInfo.stackItemUID = sequence.stackItemUID;
-                    targetingLaserHitInfo.attackSequenceId = sequence.id;
-                    targetingLaserHitInfo.attackGroupIndex = 0;
-                    targetingLaserHitInfo.attackWeaponIndex = 0;
-                    targetingLaserHitInfo.toHitRolls = new float[1];
-                    targetingLaserHitInfo.locationRolls = new float[] { randomFloat };
-                    targetingLaserHitInfo.dodgeRolls = new float[1];
-                    targetingLaserHitInfo.dodgeSuccesses = new bool[1];
-                    targetingLaserHitInfo.hitLocations = new int[1];
-                    targetingLaserHitInfo.hitPositions = new Vector3[1];
-                    targetingLaserHitInfo.hitVariance = new int[1];
-                    targetingLaserHitInfo.hitQualities = new AttackImpactQuality[1];
-                    targetingLaserHitInfo.secondaryTargetIds = new string[1];
-                    targetingLaserHitInfo.secondaryHitLocations = new int[1];
-                    targetingLaserHitInfo.attackDirections = new AttackDirection[1];
-
-                    float calledShotBonusMultiplier = sequence.attacker.CalledShotBonusMultiplier;
-                    if (hitsTarget)
-                    {
-                        Logger.Info($"[Utilities_FireStreakTargetingLaser] targetingLaserHitInfo.locationRolls[0]: {targetingLaserHitInfo.locationRolls[0]}");
-                        targetingLaserHitInfo.hitLocations[0] = sequence.chosenTarget.GetHitLocation(sequence.attacker, sequence.attackPosition, targetingLaserHitInfo.locationRolls[0], sequence.calledShotLocation, calledShotBonusMultiplier);
-                        //hitInfo.hitQualities[i] = this.Director.Combat.ToHit.GetBlowQuality(this.attacker, this.attackPosition, weapon, this.chosenTarget, this.meleeAttackType, this.IsBreachingShot);
-                    }
-                    else
-                    {
-                        targetingLaserHitInfo.hitLocations[0] = 0; // None
-                    }
-                    Logger.Info($"[Utilities_FireStreakTargetingLaser] targetingLaserHitInfo.hitLocations[0]: {targetingLaserHitInfo.hitLocations[0]}");
-                    targetingLaserHitInfo.hitPositions[0] = sequence.chosenTarget.GetImpactPosition(sequence.attacker, sequence.attackPosition, weapon, ref targetingLaserHitInfo.hitLocations[0], ref targetingLaserHitInfo.attackDirections[0], ref targetingLaserHitInfo.secondaryTargetIds[0], ref targetingLaserHitInfo.secondaryHitLocations[0]);
-
-
-
-                    // Check existence and adjust effects
-                    if (weapon.weaponRep != null && weapon.weaponRep.HasWeaponEffect)
-                    {
-                        if (weapon.weaponRep.WeaponEffect is LaserEffect LaserEffect)
-                        {
-                            // Disable sound for this effect
-                            LaserEffect.beamStartSFX = "";
-                            LaserEffect.beamStopSFX = "";
-                            LaserEffect.pulseSFX = "";
-
-                            //LaserEffect.pulseDelay = 0.25f;
-                            LaserEffect.lightIntensity = 3500000f; 
-                            LaserEffect.lightRadius = 100;
-                        }
-
-                        // Fire
-                        weapon.weaponRep.PlayWeaponEffect(targetingLaserHitInfo);
-                        Logger.Info($"[Utilities_FireStreakTargetingLaser] {actor.DisplayName} fired its targeting laser({Fields.StreakTargetingLaserId})!");
-
-                        // Sometimes the vfx of this laser persist UNTIL some targeting laser (can also be on another actor) fires and somehow clears the old "trail"
-                        // Probably need to mark as complete later to prevent vfx to persist?
-                    }
-                }
-            }
-        }
-        */
     }
 }

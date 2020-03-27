@@ -1,8 +1,6 @@
 ﻿using System;
 using BattleTech;
-using BattleTech.Rendering;
 using Harmony;
-using UnityEngine;
 
 namespace StreakMissileLaunchers.Patches
 {
@@ -14,14 +12,11 @@ namespace StreakMissileLaunchers.Patches
         {
             try
             {
-                Logger.Info($"[MissileLauncherEffect_Init_PREFIX] weapon.parent.DisplayName: {weapon.parent.DisplayName}");
-                Logger.Info($"[MissileLauncherEffect_Init_PREFIX] weapon.Name: {weapon.Name}");
-                Logger.Info($"[MissileLauncherEffect_Init_PREFIX] MissileLauncherEffect.preFireDuration: {__instance.preFireDuration}");
-
                 if (weapon.Type == WeaponType.SRM && weapon.AmmoCategoryValue.Name == "SRMStreak")
                 {
+                    float oldPFD = __instance.preFireDuration;
                     __instance.preFireDuration = 0.9f;
-                    Logger.Debug($"[MissileLauncherEffect_Init_PREFIX] ({weapon.parent.DisplayName}) Raised preFireDuration for {weapon.Name} to {__instance.preFireDuration}");
+                    Logger.Debug($"[MissileLauncherEffect_Init_PREFIX] ({weapon.parent.DisplayName}) Raised preFireDuration for {weapon.Name} from {oldPFD} to {__instance.preFireDuration}");
                 }
             }
             catch (Exception e)
@@ -31,44 +26,19 @@ namespace StreakMissileLaunchers.Patches
         }
     }
 
-    // Info
-    [HarmonyPatch(typeof(WeaponEffect), "Init")]
-    public static class WeaponEffect_Init_Patch
-    {
-        public static void Prefix(WeaponEffect __instance, Weapon weapon, float ___duration)
-        {
-            try
-            {
-                //Logger.Info($"[WeaponEffect_Init_PREFIX] actor: {weapon.parent.DisplayName}, weapon: {weapon.Name}, weaponEffect: {__instance.GetType()}, preFireDuration: {__instance.preFireDuration}");
-                //Logger.Info($"[WeaponEffect_Init_PREFIX] ___duration: {___duration}");
-            }
-            catch (Exception e)
-            {
-                Logger.Error(e);
-            }
-        }
-    }
-
-    // Info
-    [HarmonyPatch(typeof(LaserEffect), "SetupLaser")]
-    public static class LaserEffect_SetupLaser_Patch
-    {
-        public static void Postfix(LaserEffect __instance, BTLight ___laserLight, float ___laserAlpha, Color[] ___laserColor)
-        {
-            try
-            {
-                //Logger.Info($"[LaserEffect_SetupLaser_POSTFIX] weapon: {__instance.weapon.Name}, ___laserLight.LightColor: {___laserLight.LightColor}, ___laserAlpha: {___laserAlpha}, ___laserColor: {___laserColor[0]},{___laserColor[1]}");
-            }
-            catch (Exception e)
-            {
-                Logger.Error(e);
-            }
-        }
-    }
 
 
+    /**
+     * These are VERY IMPORTANT! Sending these message for pseudo-weapons will bring the underlying AttackSequence out of sync!
+     * - AttackDirector.AttackSequence.OnAttackSequenceWeaponPreFireComplete()
+     * - AttackDirector.AttackSequence.OnAttackSequenceImpact()
+     * - AttackDirector.AttackSequence.OnAttackSequenceResolveDamage()
+     * - AttackDirector.AttackSequence.OnAttackSequenceWeaponComplete()
+     * 
+     * Everything apart from suppressing the messages is rebuilt just to be sure (even though it's probably not necessary for pseudo-weapons without a sequence)
+    **/
 
-    // This is VERY IMPORTANT! Sending this message for pseudo-weapons will bring the underlying AttackSequence out of sync! (AttackDirector.AttackSequence.OnAttackSequenceWeaponPreFireComplete)
+    // Suppressing this message will prevent an early skip to the next weapon of the sequence at AttackDirector.AttackSequence.OnAttackSequenceWeaponPreFireComplete()
     [HarmonyPatch(typeof(WeaponEffect), "PublishNextWeaponMessage")]
     public static class WeaponEffect_PublishNextWeaponMessage_Patch
     {
@@ -78,7 +48,8 @@ namespace StreakMissileLaunchers.Patches
             {
                 if (__instance.weapon.weaponDef.Description.Id == Fields.StreakTargetingLaserId)
                 {
-                    Logger.Debug($"[WeaponEffect_PublishNextWeaponMessage_PREFIX] ({__instance.weapon.parent.DisplayName}) Supressing message for Weapon: {__instance.weapon.weaponDef.Description.Id}(WeaponEffect: {__instance.name})");
+                    Logger.Debug($"[WeaponEffect_PublishNextWeaponMessage_PREFIX] ({__instance.weapon.parent.DisplayName}) Supressing message for Weapon: {__instance.weapon.weaponDef.Description.Id} (WeaponEffect: {__instance.name})");
+
                     new Traverse(__instance).Field("attackSequenceNextDelayTimer").SetValue(-1f);
                     new Traverse(__instance).Field("hasSentNextWeaponMessage").SetValue(true);
 
@@ -94,7 +65,7 @@ namespace StreakMissileLaunchers.Patches
         }
     }
 
-    // Prevents processing of AttackDirector.AttackSequence.OnAttackSequenceResolveDamage
+    // Prevents processing of AttackDirector.AttackSequence.OnAttackSequenceResolveDamage()
     [HarmonyPatch(typeof(WeaponEffect), "PublishWeaponCompleteMessage")]
     public static class WeaponEffect_PublishWeaponCompleteMessage_Patch
     {
@@ -104,10 +75,9 @@ namespace StreakMissileLaunchers.Patches
             {
                 if (__instance.weapon.weaponDef.Description.Id == Fields.StreakTargetingLaserId)
                 {
-                    Logger.Debug($"[WeaponEffect_PublishWeaponCompleteMessage_PREFIX] ({__instance.weapon.parent.DisplayName}) Supressing message for Weapon: {__instance.weapon.weaponDef.Description.Id}(WeaponEffect: {__instance.name})");
-                    new Traverse(__instance).Property("FiringComplete").SetValue(true);
+                    Logger.Debug($"[WeaponEffect_PublishWeaponCompleteMessage_PREFIX] ({__instance.weapon.parent.DisplayName}) Supressing message for Weapon: {__instance.weapon.weaponDef.Description.Id} (WeaponEffect: {__instance.name})");
 
-                    Logger.Info($"[WeaponEffect_PublishWeaponCompleteMessage_PREFIX] __instance.FiringComplete: {__instance.FiringComplete}");
+                    new Traverse(__instance).Property("FiringComplete").SetValue(true);
 
                     return false;
                 }
@@ -121,17 +91,17 @@ namespace StreakMissileLaunchers.Patches
         }
     }
 
-    // Suppressing this message will disable the "1" dmg floatie on impact ((AttackDirector.AttackSequence.OnAttackSequenceImpact))
+    // Suppressing this message will disable the "1" dmg floatie on impact in AttackDirector.AttackSequence.OnAttackSequenceImpact()
     [HarmonyPatch(typeof(WeaponEffect), "OnImpact")]
     public static class WeaponEffect_OnImpact_Patch
     {
-        public static bool Prefix(WeaponEffect __instance)
+        public static bool Prefix(WeaponEffect __instance, ref float hitDamage)
         {
             try
             {
                 if (__instance.weapon.weaponDef.Description.Id == Fields.StreakTargetingLaserId)
                 {
-                    Logger.Debug($"[WeaponEffect_OnImpact_PREFIX] ({__instance.weapon.parent.DisplayName}) Supressing message for Weapon: {__instance.weapon.weaponDef.Description.Id}(WeaponEffect: {__instance.name})");
+                    Logger.Debug($"[WeaponEffect_OnImpact_PREFIX] ({__instance.weapon.parent.DisplayName}) Supressing message for Weapon: {__instance.weapon.weaponDef.Description.Id} (WeaponEffect: {__instance.name})");
 
                     return false;
                 }
@@ -145,7 +115,7 @@ namespace StreakMissileLaunchers.Patches
         }
     }
 
-    // Will just prevent processing unnecessary code (AttackDirector.AttackSequence.OnAttackSequenceResolveDamage)
+    // Will just prevent processing unnecessary code of AttackDirector.AttackSequence.OnAttackSequenceResolveDamage()
     [HarmonyPatch(typeof(WeaponEffect), "OnComplete")]
     public static class WeaponEffect_OnComplete_Patch
     {
@@ -155,7 +125,7 @@ namespace StreakMissileLaunchers.Patches
             {
                 if (__instance.weapon.weaponDef.Description.Id == Fields.StreakTargetingLaserId)
                 {
-                    Logger.Debug($"[WeaponEffect_OnComplete_PREFIX] ({__instance.weapon.parent.DisplayName}) Supressing message for Weapon: {__instance.weapon.weaponDef.Description.Id}(WeaponEffect: {__instance.name})");
+                    Logger.Debug($"[WeaponEffect_OnComplete_PREFIX] ({__instance.weapon.parent.DisplayName}) Supressing message for Weapon: {__instance.weapon.weaponDef.Description.Id} (WeaponEffect: {__instance.name})");
 
                     if (__instance.currentState == WeaponEffect.WeaponEffectState.Complete)
                     {
@@ -163,7 +133,7 @@ namespace StreakMissileLaunchers.Patches
                     }
                     __instance.currentState = WeaponEffect.WeaponEffectState.Complete;
 
-                    /* This has to be prevented...
+                    /* This is to be prevented...
                     if (!__instance.subEffect)
                     {
                         AttackSequenceResolveDamageMessage message = new AttackSequenceResolveDamageMessage(__instance.hitInfo);

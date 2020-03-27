@@ -57,7 +57,7 @@
     </Compile>
     <Compile Include="Holder.cs" />
     <Compile Include="Patches\AttackDirectorAttackSequence.cs" />
-    <Compile Include="Patches\Mech.cs" />
+    <Compile Include="Patches\CombatHUDFloatieAnchor.cs" />
     <Compile Include="Patches\WeaponEffect.cs" />
     <Compile Include="StreakMissileLaunchers.cs" />
     <Compile Include="Extensions\Weapon.cs" />

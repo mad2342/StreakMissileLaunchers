@@ -37,7 +37,7 @@
         "UIName": "Streak SRM6",
         "Id": "Weapon_Streak_SRM_SRM6_0-STOCK",
         "Name": "Streak SRM6",
-        "Details": "Streak SRM6s are the largest available rack of Streak Short-Range Missiles and pack considerable punch while also being lightweight. As for all Streak SRMs, the Streak SRM6 launcher incorporates a unique fire control system(FCS) which will prevent the missiles from launching if a hit is not guaranteed.",
+        "Details": "Streak SRM6s are the largest available rack of Streak Short-Range Missiles and pack considerable punch while also being lightweight. As for all Streak SRMs, the Streak SRM6 launcher incorporates a unique Fire Control System (FCS) which will prevent the missiles from launching if a hit is not guaranteed.",
         "Icon": "uixSvgIcon_weapon_Missile"
     },
     "BonusValueA": "FCS",

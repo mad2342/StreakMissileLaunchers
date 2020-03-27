@@ -37,7 +37,7 @@
         "UIName": "Streak SRM2",
         "Id": "Weapon_Streak_SRM_SRM2_0-STOCK",
         "Name": "Streak SRM2",
-        "Details": "A tiny rack of Streak Short-Range Missiles, Streak SRM2s deal little damage but also cost almost nothing in the way of weight, space, heat, or ammunition consumption. As for all Streak SRMs, the Streak SRM6 launcher incorporates a unique fire control system(FCS) which will prevent the missiles from launching if a hit is not guaranteed.",
+        "Details": "A tiny rack of Streak Short-Range Missiles, Streak SRM2s deal little damage but also cost almost nothing in the way of weight, space, heat, or ammunition consumption. As for all Streak SRMs, the Streak SRM6 launcher incorporates a unique Fire Control System (FCS) which will prevent the missiles from launching if a hit is not guaranteed.",
         "Icon": "uixSvgIcon_weapon_Missile"
     },
     "BonusValueA": "FCS",
