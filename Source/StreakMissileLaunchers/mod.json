@@ -11,7 +11,12 @@
     "Manifest": [
         { "Type": "WeaponDef", "Path": "WeaponDefs\\" },
 		{ "Type": "AmmunitionDef", "Path": "AmmunitionDefs\\" },
-		{ "Type": "AmmunitionBoxDef", "Path": "AmmunitionBoxDefs\\" }
+		{ "Type": "AmmunitionBoxDef", "Path": "AmmunitionBoxDefs\\" },
+        { "Type": "ItemCollectionDef", "Path": "ItemCollectionDefs\\" },
+        {
+            "Type": "AdvancedJSONMerge",
+            "Path": "StarSystemDefs"
+        }
     ],
 
     "DataAddendumEntries": [

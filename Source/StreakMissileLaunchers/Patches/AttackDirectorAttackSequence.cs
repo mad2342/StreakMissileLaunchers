@@ -59,11 +59,15 @@ namespace StreakMissileLaunchers.Patches
                     AttackSequenceGetClusteredHits.Invoke(__instance, new object[] { hitInfo, groupIdx, weaponIdx, weapon, toHitChance, prevDodgedDamage });
                     Logger.Info($"[AttackDirector.AttackSequence_GetIndividualHits_PREFIX] ({weapon.Name}) Fetched clustered hits...");
 
+                    // Clean hitInfo from potentially set secondary targets, there AREN'T secondary targets for Streaks
+                    hitInfo.secondaryTargetIds = null;
+
                     if (streakWillHit)
                     {
                         // Make absolutely sure ALL missiles hits (Needed because of roll correction in AttackDirector.AttackSequence.GetClusteredHits())
                         for (int i = 0; i < hitInfo.numberOfShots; i++)
                         {
+                            // 0 = no hit, 65536 = secondary target hit
                             if (hitInfo.hitLocations[i] == 0 || hitInfo.hitLocations[i] == 65536)
                             {
                                 Logger.Debug($"[AttackDirector.AttackSequence_GetIndividualHits_PREFIX] WARNING: Missile[{i}] had a hit location of 0|65536 even though the Streak should hit. RECALCULATING!");
@@ -77,9 +81,9 @@ namespace StreakMissileLaunchers.Patches
                         // Make absolutely sure NO missile hits (Needed because of roll correction in AttackDirector.AttackSequence.GetClusteredHits())
                         for (int i = 0; i < hitInfo.numberOfShots; i++)
                         {
-                            if (hitInfo.hitLocations[i] != 0 && hitInfo.hitLocations[i] != 65536)
+                            if (hitInfo.hitLocations[i] != 0)
                             {
-                                Logger.Debug($"[AttackDirector.AttackSequence_GetIndividualHits_PREFIX] WARNING: Missile[{i}] had a hit location != 0|65536 even though the Streak should miss. RECALCULATING!");
+                                Logger.Debug($"[AttackDirector.AttackSequence_GetIndividualHits_PREFIX] WARNING: Missile[{i}] had a hit location != 0 even though the Streak should miss. RECALCULATING!");
                                 hitInfo.hitLocations[i] = 0;
                                 hitInfo.hitPositions[i] = __instance.chosenTarget.GetImpactPosition(__instance.attacker, __instance.attackPosition, weapon, ref hitInfo.hitLocations[i], ref hitInfo.attackDirections[i], ref hitInfo.secondaryTargetIds[i], ref hitInfo.secondaryHitLocations[i]);
                             }

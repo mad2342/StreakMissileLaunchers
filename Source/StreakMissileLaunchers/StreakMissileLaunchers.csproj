@@ -42,14 +42,8 @@
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
-    <Reference Include="UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\Ref\UnityEngine.CoreModule.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.ParticleSystemModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\Ref\UnityEngine.ParticleSystemModule.dll</HintPath>
-    </Reference>
+    <Reference Include="UnityEngine.CoreModule" />
+    <Reference Include="UnityEngine.ParticleSystemModule" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\..\..\Link\MadLogger.cs">
@@ -72,6 +66,8 @@
     <None Include="AmmunitionDefs\Ammunition_SRMStreak.json" />
     <None Include="AmmunitionBoxDefs\*.json" />
     <None Include="WeaponDefs\*.json" />
+    <None Include="ItemCollectionDefs\*.csv" />
+    <None Include="StarSystemDefs\*.json" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
@@ -84,6 +80,8 @@ xcopy $(ProjectDir)AmmoCategories\* $(SolutionDir)..\Release\$(TargetName)\AmmoC
 xcopy $(ProjectDir)AmmunitionDefs\* $(SolutionDir)..\Release\$(TargetName)\AmmunitionDefs\ /Y /S
 xcopy $(ProjectDir)AmmunitionBoxDefs\* $(SolutionDir)..\Release\$(TargetName)\AmmunitionBoxDefs\ /Y /S
 xcopy $(ProjectDir)WeaponDefs\* $(SolutionDir)..\Release\$(TargetName)\WeaponDefs\ /Y /S
+xcopy $(ProjectDir)ItemCollectionDefs\* $(SolutionDir)..\Release\$(TargetName)\ItemCollectionDefs\ /Y /S
+xcopy $(ProjectDir)StarSystemDefs\* $(SolutionDir)..\Release\$(TargetName)\StarSystemDefs\ /Y /S
     </PostBuildEvent>
   </PropertyGroup>
 </Project>

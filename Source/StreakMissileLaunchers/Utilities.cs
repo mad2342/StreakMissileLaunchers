@@ -83,7 +83,7 @@ namespace StreakMissileLaunchers
             targetingLaserHitInfo.hitPositions = new Vector3[1];
             targetingLaserHitInfo.hitVariance = new int[1];
             targetingLaserHitInfo.hitQualities = new AttackImpactQuality[1];
-            targetingLaserHitInfo.secondaryTargetIds = new string[1];
+            targetingLaserHitInfo.secondaryTargetIds = null;
             targetingLaserHitInfo.secondaryHitLocations = new int[1];
             targetingLaserHitInfo.attackDirections = new AttackDirection[1];
 
