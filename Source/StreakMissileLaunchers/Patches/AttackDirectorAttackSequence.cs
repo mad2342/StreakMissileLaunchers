@@ -44,6 +44,7 @@ namespace StreakMissileLaunchers.Patches
                     bool streakWillHit = hitRoll <= hitChance;
                     Logger.Debug($"[AttackDirector.AttackSequence_OnAttackSequenceFire_PREFIX] ({weapon.Name}) streakWillHit: {streakWillHit}");
 
+                    // TEST if setting these to above/below 100percent/0percent (1f,0f) will kill roll correction
                     if (streakWillHit)
                     {
                         toHitChance = 1f;
@@ -60,16 +61,25 @@ namespace StreakMissileLaunchers.Patches
 
                     if (streakWillHit)
                     {
-                        // Needed? (Mark hitInfo depending on streakWillHit to be able to evaluate later)
-                        //hitInfo.dodgeSuccesses[i] = false;
+                        // Make absolutely sure ALL missiles hits (Needed because of roll correction in AttackDirector.AttackSequence.GetClusteredHits())
+                        for (int i = 0; i < hitInfo.numberOfShots; i++)
+                        {
+                            if (hitInfo.hitLocations[i] == 0 || hitInfo.hitLocations[i] == 65536)
+                            {
+                                Logger.Debug($"[AttackDirector.AttackSequence_GetIndividualHits_PREFIX] WARNING: Missile[{i}] had a hit location of 0|65536 even though the Streak should hit. RECALCULATING!");
+                                hitInfo.hitLocations[i] = __instance.chosenTarget.GetHitLocation(__instance.attacker, __instance.attackPosition, hitInfo.locationRolls[i], __instance.calledShotLocation, __instance.attacker.CalledShotBonusMultiplier);
+                                hitInfo.hitPositions[i] = __instance.chosenTarget.GetImpactPosition(__instance.attacker, __instance.attackPosition, weapon, ref hitInfo.hitLocations[i], ref hitInfo.attackDirections[i], ref hitInfo.secondaryTargetIds[i], ref hitInfo.secondaryHitLocations[i]);
+                            }
+                        }
                     }
                     else
                     {
                         // Make absolutely sure NO missile hits (Needed because of roll correction in AttackDirector.AttackSequence.GetClusteredHits())
                         for (int i = 0; i < hitInfo.numberOfShots; i++)
                         {
-                            if (hitInfo.hitLocations[i] != 0)
+                            if (hitInfo.hitLocations[i] != 0 && hitInfo.hitLocations[i] != 65536)
                             {
+                                Logger.Debug($"[AttackDirector.AttackSequence_GetIndividualHits_PREFIX] WARNING: Missile[{i}] had a hit location != 0|65536 even though the Streak should miss. RECALCULATING!");
                                 hitInfo.hitLocations[i] = 0;
                                 hitInfo.hitPositions[i] = __instance.chosenTarget.GetImpactPosition(__instance.attacker, __instance.attackPosition, weapon, ref hitInfo.hitLocations[i], ref hitInfo.attackDirections[i], ref hitInfo.secondaryTargetIds[i], ref hitInfo.secondaryHitLocations[i]);
                             }
@@ -151,8 +161,8 @@ namespace StreakMissileLaunchers.Patches
                     Logger.Info($"[AttackDirector.AttackSequence_OnAttackSequenceFire_PREFIX] ({weapon.Name}) streakWillHit: {streakWillHit}");
 
                     // Fire targeting laser
-                    Vector3 impactVector = new Vector3();
-                    Utilities.CreateAndFireStreakTargetingLaser(__instance, weapon, out impactVector, streakWillHit);
+                    Vector3 floatieVector = new Vector3();
+                    Utilities.CreateAndFireStreakTargetingLaser(__instance, weapon, out floatieVector, streakWillHit);
 
                     if (streakWillHit)
                     {
@@ -162,7 +172,7 @@ namespace StreakMissileLaunchers.Patches
                         //__instance.Director.Combat.MessageCenter.PublishMessage(new FloatieMessage(__instance.chosenTarget.GUID, __instance.chosenTarget.GUID, "STREAK LOCKED-ON", FloatieMessage.MessageNature.CriticalHit));
 
                         // Small Floatie
-                        FloatieMessage hitFloatie = new FloatieMessage(__instance.attacker.GUID, __instance.chosenTarget.GUID, "STREAK LOCKED-ON", __instance.Director.Combat.Constants.CombatUIConstants.floatieSizeMedium, FloatieMessage.MessageNature.Dodge, impactVector.x, impactVector.y, impactVector.z);
+                        FloatieMessage hitFloatie = new FloatieMessage(__instance.attacker.GUID, __instance.chosenTarget.GUID, "STREAK LOCKED-ON", __instance.Director.Combat.Constants.CombatUIConstants.floatieSizeMedium, FloatieMessage.MessageNature.Suppression, floatieVector.x, floatieVector.y, floatieVector.z);
                         __instance.Director.Combat.MessageCenter.PublishMessage(hitFloatie);
 
                         return true;
@@ -206,7 +216,7 @@ namespace StreakMissileLaunchers.Patches
                         //__instance.Director.Combat.MessageCenter.PublishMessage(new FloatieMessage(__instance.chosenTarget.GUID, __instance.chosenTarget.GUID, "STREAK LOCK-ON AVOIDED", FloatieMessage.MessageNature.Buff));
 
                         // Small Floatie
-                        FloatieMessage missFloatie = new FloatieMessage(__instance.attacker.GUID, __instance.chosenTarget.GUID, "STREAK LOCK-ON FAILED", __instance.Director.Combat.Constants.CombatUIConstants.floatieSizeMedium, FloatieMessage.MessageNature.Dodge, impactVector.x, impactVector.y, impactVector.z);
+                        FloatieMessage missFloatie = new FloatieMessage(__instance.attacker.GUID, __instance.chosenTarget.GUID, "STREAK LOCK-ON FAILED", __instance.Director.Combat.Constants.CombatUIConstants.floatieSizeMedium, FloatieMessage.MessageNature.Dodge, floatieVector.x, floatieVector.y, floatieVector.z);
                         __instance.Director.Combat.MessageCenter.PublishMessage(missFloatie);
 
 

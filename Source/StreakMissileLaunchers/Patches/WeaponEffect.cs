@@ -1,6 +1,8 @@
 ﻿using System;
 using BattleTech;
+using BattleTech.Rendering;
 using Harmony;
+using UnityEngine;
 
 namespace StreakMissileLaunchers.Patches
 {
@@ -28,6 +30,116 @@ namespace StreakMissileLaunchers.Patches
 
 
 
+    // Minimize the preFireDuration for targeting lasers to adjust the effect to their role
+    [HarmonyPatch(typeof(WeaponEffect), "Init")]
+    public static class WeaponEffect_Init_Patch
+    {
+        public static void Prefix(WeaponEffect __instance, Weapon weapon)
+        {
+            try
+            {
+                if (weapon.weaponDef.Description.Id == Fields.StreakTargetingLaserId)
+                {
+                    float oldPFD = __instance.preFireDuration;
+                    // MUST be > 0f or it's gonna be overridden with some fallback
+                    __instance.preFireDuration = 0.1f;
+                    Logger.Debug($"[WeaponEffect_Init_PREFIX] ({weapon.parent.DisplayName}) Changed preFireDuration for {weapon.Name} from {oldPFD} to {__instance.preFireDuration}");
+
+                    return;
+                }
+            }
+            catch (Exception e)
+            {
+                Logger.Error(e);
+            }
+        }
+    }
+
+
+
+    // Modify VFX for targeting laser
+    [HarmonyPatch(typeof(LaserEffect), "SetupLaser")]
+    public static class LaserEffect_SetupLaser_Patch
+    {
+        public static bool Prepare()
+        {
+            return Fields.AdjustTargetingLaserVFX;
+        }
+
+        public static void Prefix(LaserEffect __instance, ref Color[] ___laserColor, ref BTLight ___laserLight, ref LineRenderer ___beamRenderer)
+        {
+            try
+            {
+                Weapon weapon = __instance.weapon;
+                if (weapon.weaponDef.Description.Id == Fields.StreakTargetingLaserId)
+                {
+                    Logger.Debug($"[LaserEffect_SetupLaser_PREFIX] ({weapon.parent.DisplayName}) lightIntensity: {__instance.lightIntensity}");
+                    Logger.Debug($"[LaserEffect_SetupLaser_PREFIX] ({weapon.parent.DisplayName}) lightRadius: {__instance.lightRadius}");
+                    Logger.Debug($"[LaserEffect_SetupLaser_PREFIX] ({weapon.parent.DisplayName}) pulseDelay: {__instance.pulseDelay}");
+
+                    __instance.lightIntensity = 150000f; // Default: 3500000f (SmallLaserPulse: 50000)
+                    //__instance.lightRadius = 120; // Default: 100 (SmallLaserPulse: 60)
+                    //__instance.pulseDelay = 0.2f; // Default: ? (SmallLaserPulse: -1)
+
+                    Color overrideColor = Fields.TargetingLaserColor;
+
+                    ___beamRenderer = __instance.projectile.GetComponent<LineRenderer>();
+                    Logger.Debug($"[LaserEffect_SetupLaser_PREFIX] ({weapon.parent.DisplayName}) __beamRenderer: {___beamRenderer.startColor}, {___beamRenderer.endColor}, {___beamRenderer.startWidth}, {___beamRenderer.endWidth}");
+                    ___beamRenderer.startColor = overrideColor;
+                    ___beamRenderer.endColor = overrideColor;
+
+                    ___beamRenderer.startWidth = 1.9f;
+                    ___beamRenderer.endWidth = 2.5f;
+
+                    Logger.Debug($"[LaserEffect_SetupLaser_PREFIX] ({weapon.parent.DisplayName}) __beamRenderer: {___beamRenderer.startColor}, {___beamRenderer.endColor}, {___beamRenderer.startWidth}, {___beamRenderer.endWidth}");
+
+                    // Used by LaserEffect.Update() for ___beamRenderer too;
+                    ___laserColor[0] = overrideColor;
+                    ___laserColor[1] = overrideColor;
+
+                    ___laserLight = ___beamRenderer.GetComponentInChildren<BTLight>(true);
+                    ___laserLight.lightColor = overrideColor;
+                    Logger.Debug($"[LaserEffect_SetupLaser_PREFIX] ({weapon.parent.DisplayName}) ___laserLight.lightColor: {___laserLight.lightColor}");
+
+                    // Called in original method, not necessary here...
+                    //___laserLight.RefreshLightSettings(true);
+                }
+            }
+            catch (Exception e)
+            {
+                Logger.Error(e);
+            }
+        }
+
+        public static void Postfix(LaserEffect __instance, ref Color[] ___laserColor, ref BTLight ___laserLight, ref LineRenderer ___beamRenderer)
+        {
+            try
+            {
+                Weapon weapon = __instance.weapon;
+                if (weapon.weaponDef.Description.Id == Fields.StreakTargetingLaserId)
+                {
+                    Logger.Debug($"[LaserEffect_SetupLaser_POSTFIX] ({weapon.parent.DisplayName}) lightIntensity: {__instance.lightIntensity}");
+                    Logger.Debug($"[LaserEffect_SetupLaser_POSTFIX] ({weapon.parent.DisplayName}) lightRadius: {__instance.lightRadius}");
+                    Logger.Debug($"[LaserEffect_SetupLaser_POSTFIX] ({weapon.parent.DisplayName}) pulseDelay: {__instance.pulseDelay}");
+
+                    Logger.Debug($"[LaserEffect_SetupLaser_POSTFIX] ({weapon.parent.DisplayName}) __beamRenderer: {___beamRenderer.startColor}, {___beamRenderer.endColor}, {___beamRenderer.startWidth}, {___beamRenderer.endWidth}");
+
+                    Logger.Debug($"[LaserEffect_SetupLaser_POSTFIX] ({weapon.parent.DisplayName}) ___laserLight.lightColor: {___laserLight.lightColor}");
+
+                    Vector4 tempColor = (Vector4)AccessTools.Field(typeof(BTLight), "tempColor").GetValue(___laserLight);
+                    Vector4 linearColor = (Vector4)AccessTools.Field(typeof(BTLight), "linearColor").GetValue(___laserLight);
+                    Logger.Info($"[LaserEffect_SetupLaser_POSTFIX] ({weapon.parent.DisplayName}) ___laserLight.tempColor: {tempColor}");
+                    Logger.Info($"[LaserEffect_SetupLaser_POSTFIX] ({weapon.parent.DisplayName}) ___laserLight.linearColor: {linearColor}");
+                }
+            }
+            catch (Exception e)
+            {
+                Logger.Error(e);
+            }
+        }
+    }
+
+
     /**
      * These are VERY IMPORTANT! Sending these message for pseudo-weapons will bring the underlying AttackSequence out of sync!
      * - AttackDirector.AttackSequence.OnAttackSequenceWeaponPreFireComplete()
@@ -38,8 +150,8 @@ namespace StreakMissileLaunchers.Patches
      * Everything apart from suppressing the messages is rebuilt just to be sure (even though it's probably not necessary for pseudo-weapons without a sequence)
     **/
 
-    // Suppressing this message will prevent an early skip to the next weapon of the sequence at AttackDirector.AttackSequence.OnAttackSequenceWeaponPreFireComplete()
-    [HarmonyPatch(typeof(WeaponEffect), "PublishNextWeaponMessage")]
+            // Suppressing this message will prevent an early skip to the next weapon of the sequence at AttackDirector.AttackSequence.OnAttackSequenceWeaponPreFireComplete()
+        [HarmonyPatch(typeof(WeaponEffect), "PublishNextWeaponMessage")]
     public static class WeaponEffect_PublishNextWeaponMessage_Patch
     {
         public static bool Prefix(WeaponEffect __instance)

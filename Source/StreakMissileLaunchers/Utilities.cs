@@ -1,17 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
 using BattleTech;
+using BattleTech.UI;
 using UnityEngine;
 
 namespace StreakMissileLaunchers
 {
     class Utilities
     {
-        public static void CreateAndFireStreakTargetingLaser(AttackDirector.AttackSequence sequence, Weapon baseWeapon, out Vector3 impactVector, bool hitsTarget = true)
+        public static void CreateAndFireStreakTargetingLaser(AttackDirector.AttackSequence sequence, Weapon baseWeapon, out Vector3 floatieVector, bool hitsTarget = true)
         {
             //@ToDo: Make this work for turrets and vehicles too
 
-            impactVector = sequence.chosenTarget.CurrentPosition;
+            floatieVector = sequence.chosenTarget.CurrentPosition;
             AbstractActor actor = baseWeapon.parent;
 
             if (!(actor is Mech mech))
@@ -89,19 +90,19 @@ namespace StreakMissileLaunchers
             float calledShotBonusMultiplier = sequence.attacker.CalledShotBonusMultiplier;
             if (hitsTarget)
             {
-                //Logger.Info($"[Utilities_CreateAndFireStreakTargetingLaser] targetingLaserHitInfo.locationRolls[0]: {targetingLaserHitInfo.locationRolls[0]}");
+                Logger.Info($"[Utilities_CreateAndFireStreakTargetingLaser] targetingLaserHitInfo.locationRolls[0]: {targetingLaserHitInfo.locationRolls[0]}");
                 targetingLaserHitInfo.hitLocations[0] = sequence.chosenTarget.GetHitLocation(sequence.attacker, sequence.attackPosition, targetingLaserHitInfo.locationRolls[0], sequence.calledShotLocation, calledShotBonusMultiplier);
                 targetingLaserHitInfo.hitPositions[0] = sequence.chosenTarget.GetImpactPosition(sequence.attacker, sequence.attackPosition, TargetingLaser, ref targetingLaserHitInfo.hitLocations[0], ref targetingLaserHitInfo.attackDirections[0], ref targetingLaserHitInfo.secondaryTargetIds[0], ref targetingLaserHitInfo.secondaryHitLocations[0]);
-                impactVector = targetingLaserHitInfo.hitPositions[0];
+                floatieVector = targetingLaserHitInfo.hitPositions[0];
             }
             else
             {
                 targetingLaserHitInfo.hitLocations[0] = 0; // None
                 targetingLaserHitInfo.hitPositions[0] = sequence.chosenTarget.GetImpactPosition(sequence.attacker, sequence.attackPosition, TargetingLaser, ref targetingLaserHitInfo.hitLocations[0], ref targetingLaserHitInfo.attackDirections[0], ref targetingLaserHitInfo.secondaryTargetIds[0], ref targetingLaserHitInfo.secondaryHitLocations[0]);
-                impactVector = sequence.chosenTarget.TargetPosition + UnityEngine.Random.insideUnitSphere * 5f;
+                floatieVector = sequence.chosenTarget.TargetPosition + UnityEngine.Random.insideUnitSphere * 5f;
             }
             Logger.Info($"[Utilities_CreateAndFireStreakTargetingLaser] targetingLaserHitInfo.hitLocations[0]: {targetingLaserHitInfo.hitLocations[0]}");
-            Logger.Info($"[Utilities_CreateAndFireStreakTargetingLaser] impactVector: {impactVector}");
+            Logger.Info($"[Utilities_CreateAndFireStreakTargetingLaser] floatieVector: {floatieVector}");
 
 
 
@@ -114,11 +115,11 @@ namespace StreakMissileLaunchers
                     LaserEffect.beamStartSFX = "";
                     LaserEffect.beamStopSFX = "";
                     LaserEffect.pulseSFX = "";
-
-                    //LaserEffect.pulseDelay = 0.25f;
-                    LaserEffect.lightIntensity = 3500000f; // Default: 3500000f
-                    LaserEffect.lightRadius = 100; // Default: 100
+                    LaserEffect.weaponImpactType = AudioSwitch_weapon_type.machinegun; // Not noticable
                 }
+
+                // Ping (Could be used for Streak LRMs)
+                //RadarPingIndicator.Instance.Ping(sequence.chosenTarget.CurrentPosition);
 
                 // Fire
                 TargetingLaser.weaponRep.PlayWeaponEffect(targetingLaserHitInfo);
