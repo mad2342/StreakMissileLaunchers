@@ -77,7 +77,7 @@ namespace StreakMissileLaunchers.Patches
                     Logger.Debug($"[LaserEffect_SetupLaser_PREFIX] ({weapon.parent.DisplayName}) lightRadius: {__instance.lightRadius}");
                     Logger.Debug($"[LaserEffect_SetupLaser_PREFIX] ({weapon.parent.DisplayName}) pulseDelay: {__instance.pulseDelay}");
 
-                    __instance.lightIntensity = 150000f; // Default: 3500000f (SmallLaserPulse: 50000)
+                    __instance.lightIntensity = 300000f; // Default: 3500000f (SmallLaserPulse: 50000)
                     //__instance.lightRadius = 120; // Default: 100 (SmallLaserPulse: 60)
                     //__instance.pulseDelay = 0.2f; // Default: ? (SmallLaserPulse: -1)
 

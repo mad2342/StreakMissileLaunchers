@@ -9,9 +9,12 @@
     - If the lock-on fails no missile will be fired and the ammo is preserved
     - Small text floaties will give feedback on the target lock
 - Streaks (as their specialized ammunition) can potentially be found on any starsystem with former starleague presence
+- High quality versions are included too
 
 ## Notes
 - Streak SRM-4 and Streak SRM-6 launchers aren't canon but with Heavy Metal, what is?
+
+
 
 ## Thanks
 * janxious
