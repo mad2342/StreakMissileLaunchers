@@ -30,7 +30,7 @@
     "WeaponEffectID": "WeaponEffect-Weapon_SRM6",
     "Description": {
         "Cost": 540000,
-        "Rarity": 5,
+        "Rarity": 9,
         "Purchasable": true,
         "Manufacturer": "Irian",
         "Model": "Streak SRM Launcher",
