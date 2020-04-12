@@ -26,7 +26,7 @@
     "ShotsWhenFired": 2,
     "ProjectilesPerShot": 1,
     "AttackRecoil": 1,
-    "Instability": 3,
+    "Instability": 5,
     "WeaponEffectID": "WeaponEffect-Weapon_SRM2",
     "Description": {
         "Cost": 120000,
@@ -41,7 +41,7 @@
         "Icon": "uixSvgIcon_weapon_Missile"
     },
     "BonusValueA": "- 0.5 Tons",
-    "BonusValueB": "",
+    "BonusValueB": "+ 2 Stb.Dmg.",
     "ComponentType": "Weapon",
     "ComponentSubType": "Weapon",
     "PrefabIdentifier": "srm2",
