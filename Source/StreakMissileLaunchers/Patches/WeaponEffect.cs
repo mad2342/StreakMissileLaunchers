@@ -150,8 +150,8 @@ namespace StreakMissileLaunchers.Patches
      * Everything apart from suppressing the messages is rebuilt just to be sure (even though it's probably not necessary for pseudo-weapons without a sequence)
     **/
 
-            // Suppressing this message will prevent an early skip to the next weapon of the sequence at AttackDirector.AttackSequence.OnAttackSequenceWeaponPreFireComplete()
-        [HarmonyPatch(typeof(WeaponEffect), "PublishNextWeaponMessage")]
+    // Suppressing this message will prevent an early skip to the next weapon of the sequence at AttackDirector.AttackSequence.OnAttackSequenceWeaponPreFireComplete()
+    [HarmonyPatch(typeof(WeaponEffect), "PublishNextWeaponMessage")]
     public static class WeaponEffect_PublishNextWeaponMessage_Patch
     {
         public static bool Prefix(WeaponEffect __instance)
