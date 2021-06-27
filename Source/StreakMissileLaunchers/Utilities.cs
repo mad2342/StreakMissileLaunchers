@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using BattleTech;
-using BattleTech.UI;
 using UnityEngine;
 
 namespace StreakMissileLaunchers
